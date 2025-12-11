@@ -6,7 +6,7 @@ class SupabaseIntegration {
         // ==== SUAS NOVAS CREDENCIAIS DO SUPABASE ====
         this.config = {
             supabaseUrl: "https://nhoxcxucogdnqkkilfyn.supabase.co",
-            supabaseKey: "sb_publishable_lvhelLGHshMZZajKf7avxw_fLU67Zg2"
+            supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ob3hjeHVjb2dkbnFra2lsZnluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0NDA3NzQsImV4cCI6MjA4MTAxNjc3NH0.yJpE_bzCea6q10ena97M1nGPKHBlO6U5kx-H2s8TrXA"
         };
         
         this.cacheKey = 'viagens_cache_xcmg';
