@@ -1,12 +1,12 @@
-// supabase-integration.js - Versão Corrigida para sua tabela específica
+// supabase-integration.js - Versão Atualizada com suas credenciais
 // Integração com Supabase - Sistema de Controle de Viagens
 
 class SupabaseIntegration {
     constructor() {
-        // ==== CREDENCIAIS DO SUPABASE ====
+        // ==== SUAS NOVAS CREDENCIAIS DO SUPABASE ====
         this.config = {
             supabaseUrl: "https://nhoxcxucogdnqkkilfyn.supabase.co",
-            supabaseKey: "esb_publishable_lvhelLGHshMZZajKf7avxw_fLU67Zg2"
+            supabaseKey: "sb_publishable_lvhelLGHshMZZajKf7avxw_fLU67Zg2"
         };
         
         this.cacheKey = 'viagens_cache_xcmg';
@@ -14,7 +14,7 @@ class SupabaseIntegration {
         this.isOnline = navigator.onLine;
         this.tableName = 'viagens';
         
-        console.log('🚀 Supabase Integration iniciado');
+        console.log('🚀 Supabase Integration iniciado com novas credenciais');
     }
     
     // ==================== TESTE DE CONEXÃO ====================
@@ -97,7 +97,7 @@ class SupabaseIntegration {
     async salvarOnline(dados) {
         console.log('🌐 Enviando para Supabase...');
         
-        // Preparar payload - EXATAMENTE como sua tabela espera
+        // Preparar payload - compatível com sua tabela
         const payload = {
             data: dados.data,
             horario: dados.horario,
@@ -290,7 +290,7 @@ class SupabaseIntegration {
                 passageiro: item.passageiro,
                 observacoes: item.observacoes,
                 whatsappLink: item.whatsapp_link,
-                criadoEm: item.criado_em, // ← AGORA CORRETO!
+                criadoEm: item.criado_em,
                 sincronizado: item.sincronizado,
                 origemDados: item.origem_dados || 'supabase'
             }));
