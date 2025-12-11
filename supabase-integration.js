@@ -1,4 +1,4 @@
-// supabase-integration.js - Versão Corrigida para tabela existente
+// supabase-integration.js - Versão Corrigida para sua tabela específica
 // Integração com Supabase - Sistema de Controle de Viagens
 
 class SupabaseIntegration {
@@ -12,7 +12,7 @@ class SupabaseIntegration {
         this.cacheKey = 'viagens_cache_xcmg';
         this.offlineKey = 'viagens_offline_xcmg';
         this.isOnline = navigator.onLine;
-        this.tableName = 'viagens'; // Nome da tabela já existente
+        this.tableName = 'viagens';
         
         console.log('🚀 Supabase Integration iniciado');
     }
@@ -22,7 +22,7 @@ class SupabaseIntegration {
         try {
             console.log('🔍 Testando conexão com Supabase...');
             
-            const response = await fetch(`${this.config.supabaseUrl}/rest/v1/viagens?select=id&limit=1`, {
+            const response = await fetch(`${this.config.supabaseUrl}/rest/v1/${this.tableName}?select=id&limit=1`, {
                 method: 'GET',
                 headers: {
                     'apikey': this.config.supabaseKey,
@@ -38,7 +38,8 @@ class SupabaseIntegration {
                 this.atualizarStatusUI(true);
                 return true;
             } else {
-                console.error('❌ Erro do Supabase:', response.status);
+                const erro = await response.text();
+                console.error('❌ Erro do Supabase:', response.status, erro);
                 this.isOnline = false;
                 this.atualizarStatusUI(false);
                 return false;
@@ -96,7 +97,7 @@ class SupabaseIntegration {
     async salvarOnline(dados) {
         console.log('🌐 Enviando para Supabase...');
         
-        // Preparar payload - compatível com estrutura comum
+        // Preparar payload - EXATAMENTE como sua tabela espera
         const payload = {
             data: dados.data,
             horario: dados.horario,
@@ -106,10 +107,12 @@ class SupabaseIntegration {
             passageiro: dados.passageiro || '',
             observacoes: dados.observacoes || '',
             whatsapp_link: this.gerarLinkWhatsApp(dados),
-            created_at: new Date().toISOString()
+            criado_em: new Date().toISOString(),
+            sincronizado: true,
+            origem_dados: 'online'
         };
         
-        console.log('📤 Payload:', payload);
+        console.log('📤 Payload para Supabase:', payload);
         
         const response = await fetch(`${this.config.supabaseUrl}/rest/v1/${this.tableName}`, {
             method: 'POST',
@@ -126,12 +129,12 @@ class SupabaseIntegration {
         
         if (!response.ok) {
             const erroTexto = await response.text();
-            console.error('❌ Erro do Supabase:', erroTexto);
+            console.error('❌ Erro detalhado do Supabase:', erroTexto);
             throw new Error(`HTTP ${response.status}: ${erroTexto}`);
         }
         
         const resultado = await response.json();
-        console.log('✅ Salvo com sucesso:', resultado);
+        console.log('✅ Salvo com sucesso no Supabase:', resultado);
         
         // Limpar cache para forçar atualização
         this.limparCache();
@@ -156,7 +159,7 @@ class SupabaseIntegration {
                 console.warn('⚠️ Erro ao ler dados offline, inicializando array vazio');
             }
             
-            // Criar novo registro
+            // Criar novo registro - com mesma estrutura que a tabela
             const novoRegistro = {
                 id: 'offline_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                 data: dados.data,
@@ -167,7 +170,7 @@ class SupabaseIntegration {
                 passageiro: dados.passageiro || '',
                 observacoes: dados.observacoes || '',
                 whatsapp_link: this.gerarLinkWhatsApp(dados),
-                created_at: new Date().toISOString(),
+                criado_em: new Date().toISOString(),
                 sincronizado: false,
                 origem_dados: 'offline'
             };
@@ -252,8 +255,8 @@ class SupabaseIntegration {
         try {
             console.log('🌐 Buscando do Supabase...');
             
-            // Buscar dados do Supabase
-            const response = await fetch(`${this.config.supabaseUrl}/rest/v1/${this.tableName}?select=*`, {
+            // Buscar com ordenação por criado_em (descendente)
+            const response = await fetch(`${this.config.supabaseUrl}/rest/v1/${this.tableName}?select=*&order=criado_em.desc`, {
                 method: 'GET',
                 headers: {
                     'apikey': this.config.supabaseKey,
@@ -264,7 +267,9 @@ class SupabaseIntegration {
             console.log('📥 Status da busca:', response.status);
             
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                const erro = await response.text();
+                console.error('❌ Erro ao buscar:', response.status, erro);
+                throw new Error(`HTTP ${response.status}: ${erro}`);
             }
             
             const dadosOnline = await response.json();
@@ -276,7 +281,7 @@ class SupabaseIntegration {
             
             // Formatar para o sistema
             const viagensFormatadas = todasViagens.map(item => ({
-                id: item.id || `temp_${Date.now()}_${Math.random()}`,
+                id: item.id,
                 data: item.data,
                 horario: item.horario,
                 motorista: item.motorista,
@@ -285,8 +290,8 @@ class SupabaseIntegration {
                 passageiro: item.passageiro,
                 observacoes: item.observacoes,
                 whatsappLink: item.whatsapp_link,
-                criadoEm: item.created_at,
-                sincronizado: item.sincronizado !== false,
+                criadoEm: item.criado_em, // ← AGORA CORRETO!
+                sincronizado: item.sincronizado,
                 origemDados: item.origem_dados || 'supabase'
             }));
             
@@ -330,11 +335,27 @@ class SupabaseIntegration {
         
         let sucessos = 0;
         let falhas = 0;
+        const pendentesAtualizados = [...pendentes];
         
-        for (const pendente of pendentes) {
+        for (let i = 0; i < pendentes.length; i++) {
+            const pendente = pendentes[i];
             try {
-                // Preparar dados para envio (remover campos internos)
-                const { id, origem_dados, sincronizado, ...dadosEnvio } = pendente;
+                console.log(`📤 Sincronizando viagem ${i + 1}/${pendentes.length}: ${pendente.motorista} - ${pendente.data}`);
+                
+                // Preparar dados para envio - exatamente como a tabela espera
+                const dadosEnvio = {
+                    data: pendente.data,
+                    horario: pendente.horario,
+                    motorista: pendente.motorista,
+                    origem: pendente.origem,
+                    destino: pendente.destino,
+                    passageiro: pendente.passageiro || '',
+                    observacoes: pendente.observacoes || '',
+                    whatsapp_link: pendente.whatsapp_link,
+                    criado_em: pendente.criado_em,
+                    sincronizado: true,
+                    origem_dados: 'online'
+                };
                 
                 const response = await fetch(`${this.config.supabaseUrl}/rest/v1/${this.tableName}`, {
                     method: 'POST',
@@ -348,14 +369,8 @@ class SupabaseIntegration {
                 });
                 
                 if (response.ok) {
-                    // Marcar como sincronizado no localStorage
-                    const dadosOffline = this.getDadosOffline();
-                    const index = dadosOffline.findIndex(v => v.id === pendente.id);
-                    if (index !== -1) {
-                        dadosOffline[index].sincronizado = true;
-                        localStorage.setItem(this.offlineKey, JSON.stringify(dadosOffline));
-                    }
-                    
+                    // Marcar como sincronizado
+                    pendentesAtualizados[i].sincronizado = true;
                     sucessos++;
                     console.log(`✅ Sincronizado: ${pendente.motorista} - ${pendente.data}`);
                 } else {
@@ -370,10 +385,21 @@ class SupabaseIntegration {
             }
         }
         
+        // Atualizar localStorage com os dados sincronizados
+        if (sucessos > 0) {
+            const todosDadosOffline = this.getDadosOffline();
+            const dadosAtualizados = todosDadosOffline.map(item => {
+                const pendenteAtualizado = pendentesAtualizados.find(p => p.id === item.id);
+                return pendenteAtualizado || item;
+            });
+            
+            localStorage.setItem(this.offlineKey, JSON.stringify(dadosAtualizados));
+        }
+        
         // Limpar cache para forçar atualização
         this.limparCache();
         
-        console.log(`📊 Sincronização: ${sucessos} sucessos, ${falhas} falhas`);
+        console.log(`📊 Sincronização completa: ${sucessos} sucessos, ${falhas} falhas`);
         
         return {
             success: sucessos > 0,
@@ -450,7 +476,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Testar conexão após 1 segundo
     setTimeout(async () => {
-        await window.supabase.testarConexao();
+        const conectado = await window.supabase.testarConexao();
+        if (conectado) {
+            console.log('🌐 Conexão estabelecida com sucesso!');
+        }
     }, 1000);
     
     // Monitorar mudanças de conexão
@@ -459,17 +488,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.supabase.isOnline = true;
         window.supabase.atualizarStatusUI(true);
         
-        // Sincronizar pendentes após 2 segundos
+        // Sincronizar pendentes após 3 segundos
         setTimeout(async () => {
+            console.log('🔄 Iniciando sincronização automática...');
             const resultado = await window.supabase.sincronizarPendentes();
             if (resultado.sincronizados > 0) {
-                console.log(`🔄 ${resultado.sincronizados} viagens sincronizadas`);
-                // Recarregar a lista de viagens se a função existir
+                console.log(`🔄 ${resultado.sincronizados} viagens sincronizadas com sucesso!`);
+                // Recarregar a lista de viagens
                 if (typeof carregarViagens === 'function') {
-                    setTimeout(carregarViagens, 1000);
+                    setTimeout(() => {
+                        carregarViagens();
+                        mostrarMensagem(`${resultado.sincronizados} viagens sincronizadas!`, 'sucesso');
+                    }, 1000);
                 }
             }
-        }, 2000);
+        }, 3000);
     });
     
     window.addEventListener('offline', () => {
@@ -478,10 +511,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.supabase.atualizarStatusUI(false);
     });
     
-    // Sincronizar a cada 5 minutos se online
+    // Sincronizar a cada 10 minutos se online
     setInterval(() => {
         if (window.supabase.isOnline) {
             window.supabase.sincronizarPendentes();
         }
-    }, 5 * 60 * 1000);
+    }, 10 * 60 * 1000);
 });
