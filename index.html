@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚗 Controle de Viagens</title>
+    <title>🚗 Controle de Viagens - XCMG</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -11,8 +11,8 @@
     <div class="container">
         <!-- CABEÇALHO -->
         <header class="header">
-            <h1><i class="fas fa-car"></i> Controle de Viagens</h1>
-            <p class="subtitle">Sistema integrado com Microsoft Lists</p>
+            <h1><i class="fas fa-car"></i> Controle de Viagens - XCMG</h1>
+            <p class="subtitle">Sistema integrado com motoristas pré-selecionados</p>
             <div class="status-bar" id="status-conexao">
                 <i class="fas fa-spinner fa-spin"></i> Conectando...
             </div>
@@ -32,13 +32,19 @@
                 <!-- HORÁRIO -->
                 <div class="form-group">
                     <label for="horario"><i class="fas fa-clock"></i> Horário *</label>
-                    <input type="text" id="horario" class="form-control" placeholder="09:00" maxlength="5" required>
+                    <input type="text" id="horario" class="form-control" placeholder="07:30" maxlength="5" required>
                 </div>
                 
                 <!-- MOTORISTA -->
                 <div class="form-group">
                     <label for="motorista"><i class="fas fa-user"></i> Motorista *</label>
-                    <input type="text" id="motorista" class="form-control" placeholder="Nome do motorista" required>
+                    <select id="motorista" class="form-control" required onchange="atualizarCampos()">
+                        <option value="">Selecione um motorista</option>
+                        <option value="Handerson">Handerson</option>
+                        <option value="Beto">Beto</option>
+                        <option value="Uber">Uber</option>
+                        <option value="Van">Van</option>
+                    </select>
                 </div>
                 
                 <!-- ORIGEM -->
@@ -50,13 +56,30 @@
                 <!-- DESTINO -->
                 <div class="form-group">
                     <label for="destino"><i class="fas fa-flag-checkered"></i> Destino *</label>
-                    <input type="text" id="destino" class="form-control" placeholder="Local de destino" required>
+                    <input type="text" id="destino" class="form-control" placeholder="Campinas, Jundiai, Barueri e Guarulhos" required>
                 </div>
                 
                 <!-- PASSAGEIRO -->
                 <div class="form-group">
                     <label for="passageiro"><i class="fas fa-users"></i> Passageiro(s)</label>
                     <input type="text" id="passageiro" class="form-control" placeholder="Opcional">
+                </div>
+            </div>
+            
+            <!-- CAMPOS DA VAN -->
+            <div id="campos-van" style="display: none;">
+                <h3 style="margin: 20px 0 15px; color: #d32f2f; border-bottom: 2px solid #ffcdd2; padding-bottom: 8px;">
+                    <i class="fas fa-van-shuttle"></i> Informações do Passageiro (Van)
+                </h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="nome-passageiro" class="required"><i class="fas fa-user"></i> Nome do Passageiro *</label>
+                        <input type="text" id="nome-passageiro" class="form-control" placeholder="Nome completo do passageiro">
+                    </div>
+                    <div class="form-group">
+                        <label for="documento-passageiro" class="required"><i class="fas fa-id-card"></i> Documento *</label>
+                        <input type="text" id="documento-passageiro" class="form-control" placeholder="CPF ou RG do passageiro">
+                    </div>
                 </div>
             </div>
             
@@ -135,8 +158,8 @@
 
         <!-- RODAPÉ -->
         <footer class="footer">
-            <p>Sistema de Controle de Viagens | Integrado com Microsoft Lists</p>
-            <p class="small">XCMG Brasil Indústria</p>
+            <p>Sistema de Controle de Viagens | XCMG Brasil Indústria</p>
+            <p class="small">Handerson | Beto | Uber | Van</p>
         </footer>
     </div>
 
