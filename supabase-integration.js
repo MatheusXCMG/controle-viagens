@@ -1,4 +1,4 @@
-// supabase-integration.js
+// supabase-integration.js - Versão Corrigida para tabela existente
 // Integração com Supabase - Sistema de Controle de Viagens
 
 class SupabaseIntegration {
@@ -9,9 +9,10 @@ class SupabaseIntegration {
             supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ua2hqaXR0d2pteWJqaXBzcHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0NTAzMTksImV4cCI6MjA4MTAyNjMxOX0.EqO2SPaevPDdEo7vjDZQNyUXKiVurxROy9lcTxTn4Ic"
         };
         
-        this.cacheKey = 'viagens_cache';
-        this.offlineKey = 'viagens_offline';
+        this.cacheKey = 'viagens_cache_xcmg';
+        this.offlineKey = 'viagens_offline_xcmg';
         this.isOnline = navigator.onLine;
+        this.tableName = 'viagens'; // Nome da tabela já existente
         
         console.log('🚀 Supabase Integration iniciado');
     }
@@ -21,12 +22,11 @@ class SupabaseIntegration {
         try {
             console.log('🔍 Testando conexão com Supabase...');
             
-            const response = await fetch(`${this.config.supabaseUrl}/rest/v1/viagens?select=count`, {
+            const response = await fetch(`${this.config.supabaseUrl}/rest/v1/viagens?select=id&limit=1`, {
                 method: 'GET',
                 headers: {
                     'apikey': this.config.supabaseKey,
-                    'Authorization': `Bearer ${this.config.supabaseKey}`,
-                    'Range': '0-0'
+                    'Authorization': `Bearer ${this.config.supabaseKey}`
                 }
             });
             
@@ -38,8 +38,7 @@ class SupabaseIntegration {
                 this.atualizarStatusUI(true);
                 return true;
             } else {
-                const erro = await response.text();
-                console.error('❌ Erro do Supabase:', erro);
+                console.error('❌ Erro do Supabase:', response.status);
                 this.isOnline = false;
                 this.atualizarStatusUI(false);
                 return false;
@@ -97,24 +96,22 @@ class SupabaseIntegration {
     async salvarOnline(dados) {
         console.log('🌐 Enviando para Supabase...');
         
-        // Preparar payload
+        // Preparar payload - compatível com estrutura comum
         const payload = {
             data: dados.data,
             horario: dados.horario,
             motorista: dados.motorista,
             origem: dados.origem,
             destino: dados.destino,
-            passageiro: dados.passageiro || null,
-            observacoes: dados.observacoes || null,
+            passageiro: dados.passageiro || '',
+            observacoes: dados.observacoes || '',
             whatsapp_link: this.gerarLinkWhatsApp(dados),
-            sincronizado: true,
-            origem_dados: 'online',
-            criado_em: new Date().toISOString()
+            created_at: new Date().toISOString()
         };
         
         console.log('📤 Payload:', payload);
         
-        const response = await fetch(`${this.config.supabaseUrl}/rest/v1/viagens`, {
+        const response = await fetch(`${this.config.supabaseUrl}/rest/v1/${this.tableName}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -129,6 +126,7 @@ class SupabaseIntegration {
         
         if (!response.ok) {
             const erroTexto = await response.text();
+            console.error('❌ Erro do Supabase:', erroTexto);
             throw new Error(`HTTP ${response.status}: ${erroTexto}`);
         }
         
@@ -166,10 +164,10 @@ class SupabaseIntegration {
                 motorista: dados.motorista,
                 origem: dados.origem,
                 destino: dados.destino,
-                passageiro: dados.passageiro || null,
-                observacoes: dados.observacoes || null,
+                passageiro: dados.passageiro || '',
+                observacoes: dados.observacoes || '',
                 whatsapp_link: this.gerarLinkWhatsApp(dados),
-                criado_em: new Date().toISOString(),
+                created_at: new Date().toISOString(),
                 sincronizado: false,
                 origem_dados: 'offline'
             };
@@ -206,33 +204,30 @@ class SupabaseIntegration {
         const dataObj = new Date(dados.data);
         const dataFormatada = dataObj.toLocaleDateString('pt-BR');
         
-        let mensagem = `NOVA VIAGEM PROGRAMADA - XCMG\n`;
-        mensagem += `\n📅 Data: ${dataFormatada}`;
-        mensagem += `\n⏰ Horário: ${dados.horario}`;
-        mensagem += `\n👤 Motorista: ${motorista}`;
-        mensagem += `\n📍 Origem: ${dados.origem}`;
-        mensagem += `\n🎯 Destino: ${dados.destino}`;
+        let mensagem = `*NOVA VIAGEM PROGRAMADA - XCMG*\n`;
+        mensagem += `\n📅 *Data:* ${dataFormatada}`;
+        mensagem += `\n⏰ *Horário:* ${dados.horario}`;
+        mensagem += `\n👤 *Motorista:* ${motorista}`;
+        mensagem += `\n📍 *Origem:* ${dados.origem}`;
+        mensagem += `\n🎯 *Destino:* ${dados.destino}`;
         
         // Informações específicas por motorista
-        if (motorista === 'Van') {
-            // Processar passageiros da Van
-            if (dados.passageiro) {
-                const passageirosArray = dados.passageiro.split(' | ');
-                mensagem += `\n\n👥 PASSAGEIROS:`;
-                passageirosArray.forEach((p, i) => {
-                    const [nome, doc] = p.split(' - ');
-                    mensagem += `\n${i + 1}. ${nome || 'N/A'} - ${doc || 'Sem documento'}`;
-                });
-            }
-        } else if (motorista === 'Uber' && dados.passageiro) {
-            mensagem += `\n👤 Passageiro: ${dados.passageiro}`;
+        if (motorista === 'Van' && dados.passageiro) {
+            mensagem += `\n\n👥 *PASSAGEIROS:*`;
+            const passageirosArray = dados.passageiro.split(' | ');
+            passageirosArray.forEach((p, i) => {
+                const [nome, doc] = p.split(' - ');
+                mensagem += `\n${i + 1}. ${nome || 'N/A'} - ${doc || 'Sem documento'}`;
+            });
+        } else if ((motorista === 'Uber' || motorista === 'Handerson' || motorista === 'Beto') && dados.passageiro) {
+            mensagem += `\n👤 *Passageiro:* ${dados.passageiro}`;
         }
         
-        if (dados.observacoes) {
-            mensagem += `\n\n📝 Observações: ${dados.observacoes}`;
+        if (dados.observacoes && dados.observacoes.trim() !== '') {
+            mensagem += `\n\n📝 *Observações:* ${dados.observacoes}`;
         }
         
-        mensagem += `\n\n---\nSistema de Controle de Viagens XCMG`;
+        mensagem += `\n\n---\n*Sistema de Controle de Viagens XCMG*`;
         
         return `https://api.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`;
     }
@@ -257,12 +252,12 @@ class SupabaseIntegration {
         try {
             console.log('🌐 Buscando do Supabase...');
             
-            const response = await fetch(`${this.config.supabaseUrl}/rest/v1/viagens?select=*&order=created_at.desc`, {
+            // Buscar dados do Supabase
+            const response = await fetch(`${this.config.supabaseUrl}/rest/v1/${this.tableName}?select=*`, {
                 method: 'GET',
                 headers: {
                     'apikey': this.config.supabaseKey,
-                    'Authorization': `Bearer ${this.config.supabaseKey}`,
-                    'Range': '0-999'
+                    'Authorization': `Bearer ${this.config.supabaseKey}`
                 }
             });
             
@@ -281,7 +276,7 @@ class SupabaseIntegration {
             
             // Formatar para o sistema
             const viagensFormatadas = todasViagens.map(item => ({
-                id: item.id,
+                id: item.id || `temp_${Date.now()}_${Math.random()}`,
                 data: item.data,
                 horario: item.horario,
                 motorista: item.motorista,
@@ -290,10 +285,17 @@ class SupabaseIntegration {
                 passageiro: item.passageiro,
                 observacoes: item.observacoes,
                 whatsappLink: item.whatsapp_link,
-                criadoEm: item.criado_em || item.created_at,
+                criadoEm: item.created_at,
                 sincronizado: item.sincronizado !== false,
                 origemDados: item.origem_dados || 'supabase'
             }));
+            
+            // Ordenar por data de criação (mais recente primeiro)
+            viagensFormatadas.sort((a, b) => {
+                const dateA = new Date(a.criadoEm || a.data);
+                const dateB = new Date(b.criadoEm || b.data);
+                return dateB - dateA;
+            });
             
             // Salvar em cache
             this.setCache(viagensFormatadas);
@@ -334,7 +336,7 @@ class SupabaseIntegration {
                 // Preparar dados para envio (remover campos internos)
                 const { id, origem_dados, sincronizado, ...dadosEnvio } = pendente;
                 
-                const response = await fetch(`${this.config.supabaseUrl}/rest/v1/viagens`, {
+                const response = await fetch(`${this.config.supabaseUrl}/rest/v1/${this.tableName}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -348,17 +350,18 @@ class SupabaseIntegration {
                 if (response.ok) {
                     // Marcar como sincronizado no localStorage
                     const dadosOffline = this.getDadosOffline();
-                    const index = dadosOffline.findIndex(v => v.id === id);
+                    const index = dadosOffline.findIndex(v => v.id === pendente.id);
                     if (index !== -1) {
                         dadosOffline[index].sincronizado = true;
                         localStorage.setItem(this.offlineKey, JSON.stringify(dadosOffline));
                     }
                     
                     sucessos++;
-                    console.log(`✅ Sincronizado: ${pendente.motorista}`);
+                    console.log(`✅ Sincronizado: ${pendente.motorista} - ${pendente.data}`);
                 } else {
+                    const erro = await response.text();
+                    console.error(`❌ Falha: ${pendente.motorista} - Status: ${response.status}`, erro);
                     falhas++;
-                    console.error(`❌ Falha: ${pendente.motorista} - Status: ${response.status}`);
                 }
                 
             } catch (error) {
@@ -382,21 +385,22 @@ class SupabaseIntegration {
     // ==================== MÉTODOS AUXILIARES ====================
     
     validarDados(dados) {
-        return dados.data && 
-               dados.horario && 
-               dados.motorista && 
-               dados.origem && 
-               dados.destino;
+        const camposObrigatorios = ['data', 'horario', 'motorista', 'origem', 'destino'];
+        
+        for (const campo of camposObrigatorios) {
+            if (!dados[campo] || dados[campo].trim() === '') {
+                console.error(`❌ Campo obrigatório faltando: ${campo}`);
+                return false;
+            }
+        }
+        
+        return true;
     }
     
     getDadosOffline() {
         try {
             const dados = JSON.parse(localStorage.getItem(this.offlineKey) || '[]');
-            // Garantir que todos os registros têm ID
-            return dados.map((item, index) => ({
-                ...item,
-                id: item.id || `offline_${Date.now()}_${index}`
-            }));
+            return dados;
         } catch (error) {
             console.warn('⚠️ Erro ao ler dados offline:', error);
             return [];
@@ -404,12 +408,16 @@ class SupabaseIntegration {
     }
     
     setCache(data) {
-        const cacheData = {
-            data: data,
-            timestamp: Date.now(),
-            expiry: 2 * 60 * 1000 // 2 minutos
-        };
-        localStorage.setItem(this.cacheKey, JSON.stringify(cacheData));
+        try {
+            const cacheData = {
+                data: data,
+                timestamp: Date.now(),
+                expiry: 5 * 60 * 1000 // 5 minutos
+            };
+            localStorage.setItem(this.cacheKey, JSON.stringify(cacheData));
+        } catch (error) {
+            console.warn('⚠️ Erro ao salvar cache:', error);
+        }
     }
     
     getCache() {
@@ -425,7 +433,11 @@ class SupabaseIntegration {
     }
     
     limparCache() {
-        localStorage.removeItem(this.cacheKey);
+        try {
+            localStorage.removeItem(this.cacheKey);
+        } catch (error) {
+            console.warn('⚠️ Erro ao limpar cache:', error);
+        }
     }
 }
 
@@ -452,9 +464,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const resultado = await window.supabase.sincronizarPendentes();
             if (resultado.sincronizados > 0) {
                 console.log(`🔄 ${resultado.sincronizados} viagens sincronizadas`);
-                // Recarregar a lista de viagens
+                // Recarregar a lista de viagens se a função existir
                 if (typeof carregarViagens === 'function') {
-                    carregarViagens();
+                    setTimeout(carregarViagens, 1000);
                 }
             }
         }, 2000);
