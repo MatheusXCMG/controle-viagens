@@ -3,7 +3,7 @@
 
 class SupabaseIntegration {
     constructor() {
-        // ==== SUAS CREDENCIAIS DO SUPABASE ====
+        // ==== CREDENCIAIS DO SUPABASE ====
         this.config = {
             supabaseUrl: "https://mnkhjittwjmybjipspwp.supabase.co",
             supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ua2hqaXR0d2pteWJqaXBzcHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0NTAzMTksImV4cCI6MjA4MTAyNjMxOX0.EqO2SPaevPDdEo7vjDZQNyUXKiVurxROy9lcTxTn4Ic"
@@ -108,7 +108,8 @@ class SupabaseIntegration {
             observacoes: dados.observacoes || null,
             whatsapp_link: this.gerarLinkWhatsApp(dados),
             sincronizado: true,
-            origem_dados: 'online'
+            origem_dados: 'online',
+            criado_em: new Date().toISOString()
         };
         
         console.log('📤 Payload:', payload);
@@ -159,7 +160,7 @@ class SupabaseIntegration {
             
             // Criar novo registro
             const novoRegistro = {
-                id: 'offline_' + Date.now(),
+                id: 'offline_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
                 data: dados.data,
                 horario: dados.horario,
                 motorista: dados.motorista,
@@ -200,51 +201,38 @@ class SupabaseIntegration {
     // ==================== GERAR LINK WHATSAPP ====================
     gerarLinkWhatsApp(dados) {
         const motorista = dados.motorista;
-        let mensagem = '';
         
         // Formatar data brasileira
         const dataObj = new Date(dados.data);
         const dataFormatada = dataObj.toLocaleDateString('pt-BR');
         
-        if (motorista === 'Uber') {
-            mensagem = `NOVA VIAGEM PROGRAMADA!\n\n` +
-                       `Data: ${dataFormatada} às ${dados.horario}\n` +
-                       `Passageiro(s): ${dados.passageiro || 'N/A'}\n` +
-                       `Origem: ${dados.origem}\n` +
-                       `Destino: ${dados.destino}\n\n` +
-                       `Observação: ${dados.observacoes || ''}`;
-                       
-        } else if (motorista === 'Van') {
-            // Extrair nome e documento da Van
-            let nomePassageiro = 'N/A';
-            let documentoPassageiro = '';
-            
+        let mensagem = `NOVA VIAGEM PROGRAMADA - XCMG\n`;
+        mensagem += `\n📅 Data: ${dataFormatada}`;
+        mensagem += `\n⏰ Horário: ${dados.horario}`;
+        mensagem += `\n👤 Motorista: ${motorista}`;
+        mensagem += `\n📍 Origem: ${dados.origem}`;
+        mensagem += `\n🎯 Destino: ${dados.destino}`;
+        
+        // Informações específicas por motorista
+        if (motorista === 'Van') {
+            // Processar passageiros da Van
             if (dados.passageiro) {
-                const parts = dados.passageiro.split(' - ');
-                if (parts.length >= 2) {
-                    nomePassageiro = parts[0];
-                    documentoPassageiro = parts[1].split(' | ')[0];
-                }
+                const passageirosArray = dados.passageiro.split(' | ');
+                mensagem += `\n\n👥 PASSAGEIROS:`;
+                passageirosArray.forEach((p, i) => {
+                    const [nome, doc] = p.split(' - ');
+                    mensagem += `\n${i + 1}. ${nome || 'N/A'} - ${doc || 'Sem documento'}`;
+                });
             }
-            
-            mensagem = `NOVA VIAGEM PROGRAMADA!\n\n` +
-                       `Data: ${dataFormatada} às ${dados.horario}\n` +
-                       `Passageiro(s): ${nomePassageiro}\n` +
-                       `Documento: ${documentoPassageiro || 'N/A'}\n` +
-                       `Origem: ${dados.origem}\n` +
-                       `Destino: ${dados.destino}\n\n` +
-                       `Observação: ${dados.observacoes || ''}`;
-                       
-        } else {
-            // Handerson e Beto
-            mensagem = `NOVA VIAGEM PROGRAMADA!\n\n` +
-                       `Data: ${dataFormatada} às ${dados.horario}\n` +
-                       `Passageiro(s): ${dados.passageiro || 'N/A'}\n` +
-                       `Origem: ${dados.origem}\n` +
-                       `Destino: ${dados.destino}\n` +
-                       `Motorista: ${dados.motorista}\n\n` +
-                       `Observação: ${dados.observacoes || ''}`;
+        } else if (motorista === 'Uber' && dados.passageiro) {
+            mensagem += `\n👤 Passageiro: ${dados.passageiro}`;
         }
+        
+        if (dados.observacoes) {
+            mensagem += `\n\n📝 Observações: ${dados.observacoes}`;
+        }
+        
+        mensagem += `\n\n---\nSistema de Controle de Viagens XCMG`;
         
         return `https://api.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`;
     }
@@ -269,11 +257,12 @@ class SupabaseIntegration {
         try {
             console.log('🌐 Buscando do Supabase...');
             
-            const response = await fetch(`${this.config.supabaseUrl}/rest/v1/viagens?select=*&order=criado_em.desc`, {
+            const response = await fetch(`${this.config.supabaseUrl}/rest/v1/viagens?select=*&order=created_at.desc`, {
                 method: 'GET',
                 headers: {
                     'apikey': this.config.supabaseKey,
-                    'Authorization': `Bearer ${this.config.supabaseKey}`
+                    'Authorization': `Bearer ${this.config.supabaseKey}`,
+                    'Range': '0-999'
                 }
             });
             
@@ -292,7 +281,7 @@ class SupabaseIntegration {
             
             // Formatar para o sistema
             const viagensFormatadas = todasViagens.map(item => ({
-                id: item.id || item.id,
+                id: item.id,
                 data: item.data,
                 horario: item.horario,
                 motorista: item.motorista,
@@ -301,7 +290,7 @@ class SupabaseIntegration {
                 passageiro: item.passageiro,
                 observacoes: item.observacoes,
                 whatsappLink: item.whatsapp_link,
-                criadoEm: item.criado_em,
+                criadoEm: item.criado_em || item.created_at,
                 sincronizado: item.sincronizado !== false,
                 origemDados: item.origem_dados || 'supabase'
             }));
@@ -343,7 +332,7 @@ class SupabaseIntegration {
         for (const pendente of pendentes) {
             try {
                 // Preparar dados para envio (remover campos internos)
-                const { id, origem_dados, sincronizado, criado_em, ...dadosEnvio } = pendente;
+                const { id, origem_dados, sincronizado, ...dadosEnvio } = pendente;
                 
                 const response = await fetch(`${this.config.supabaseUrl}/rest/v1/viagens`, {
                     method: 'POST',
@@ -357,8 +346,14 @@ class SupabaseIntegration {
                 });
                 
                 if (response.ok) {
-                    // Marcar como sincronizado
-                    pendente.sincronizado = true;
+                    // Marcar como sincronizado no localStorage
+                    const dadosOffline = this.getDadosOffline();
+                    const index = dadosOffline.findIndex(v => v.id === id);
+                    if (index !== -1) {
+                        dadosOffline[index].sincronizado = true;
+                        localStorage.setItem(this.offlineKey, JSON.stringify(dadosOffline));
+                    }
+                    
                     sucessos++;
                     console.log(`✅ Sincronizado: ${pendente.motorista}`);
                 } else {
@@ -371,9 +366,6 @@ class SupabaseIntegration {
                 console.error(`❌ Erro ao sincronizar ${pendente.motorista}:`, error);
             }
         }
-        
-        // Atualizar localStorage
-        this.atualizarDadosOffline();
         
         // Limpar cache para forçar atualização
         this.limparCache();
@@ -399,16 +391,16 @@ class SupabaseIntegration {
     
     getDadosOffline() {
         try {
-            return JSON.parse(localStorage.getItem(this.offlineKey) || '[]');
+            const dados = JSON.parse(localStorage.getItem(this.offlineKey) || '[]');
+            // Garantir que todos os registros têm ID
+            return dados.map((item, index) => ({
+                ...item,
+                id: item.id || `offline_${Date.now()}_${index}`
+            }));
         } catch (error) {
             console.warn('⚠️ Erro ao ler dados offline:', error);
             return [];
         }
-    }
-    
-    atualizarDadosOffline() {
-        const dados = this.getDadosOffline();
-        localStorage.setItem(this.offlineKey, JSON.stringify(dados));
     }
     
     setCache(data) {
@@ -441,7 +433,7 @@ class SupabaseIntegration {
 window.supabase = new SupabaseIntegration();
 
 // Inicialização automática
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('📄 Supabase Integration carregado');
     
     // Testar conexão após 1 segundo
@@ -460,6 +452,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const resultado = await window.supabase.sincronizarPendentes();
             if (resultado.sincronizados > 0) {
                 console.log(`🔄 ${resultado.sincronizados} viagens sincronizadas`);
+                // Recarregar a lista de viagens
+                if (typeof carregarViagens === 'function') {
+                    carregarViagens();
+                }
             }
         }, 2000);
     });
@@ -470,10 +466,10 @@ document.addEventListener('DOMContentLoaded', () => {
         window.supabase.atualizarStatusUI(false);
     });
     
-    // Sincronizar a cada 1 minuto se online
+    // Sincronizar a cada 5 minutos se online
     setInterval(() => {
         if (window.supabase.isOnline) {
             window.supabase.sincronizarPendentes();
         }
-    }, 60 * 1000);
+    }, 5 * 60 * 1000);
 });
