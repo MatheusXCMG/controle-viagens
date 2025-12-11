@@ -1,5 +1,4 @@
-// app.js
-// Lógica principal do sistema de controle de viagens
+// app.js - Sistema de Controle de Viagens com Motoristas Pré-selecionados
 
 // ==================== VARIÁVEIS GLOBAIS ====================
 let viagens = [];
@@ -31,6 +30,41 @@ document.addEventListener('DOMContentLoaded', function() {
     configurarTeclas();
 });
 
+// ==================== FUNÇÕES PARA MOTORISTAS ====================
+
+function atualizarCampos() {
+    const motorista = document.getElementById('motorista').value;
+    const camposVan = document.getElementById('campos-van');
+    const passageiroInput = document.getElementById('passageiro');
+    
+    // Mostrar/ocultar campos da Van
+    if (motorista === 'Van') {
+        camposVan.style.display = 'block';
+        passageiroInput.placeholder = 'Informações adicionais (opcional)';
+        // Limpar campo passageiro quando selecionar Van
+        passageiroInput.value = '';
+    } else {
+        camposVan.style.display = 'none';
+        passageiroInput.placeholder = 'Opcional';
+        
+        // Resetar campos da Van
+        document.getElementById('nome-passageiro').value = '';
+        document.getElementById('documento-passageiro').value = '';
+        document.getElementById('nome-passageiro').style.borderColor = '#e0e0e0';
+        document.getElementById('documento-passageiro').style.borderColor = '#e0e0e0';
+    }
+    
+    // Auto-preencher origem padrão para XCMG
+    if (motorista && !document.getElementById('origem').value) {
+        document.getElementById('origem').value = 'XCMG Brasil Indústria';
+    }
+    
+    // Auto-preencher destino sugerido
+    if (motorista && !document.getElementById('destino').value) {
+        document.getElementById('destino').value = 'Campinas, Jundiai, Barueri e Guarulhos';
+    }
+}
+
 // ==================== FUNÇÕES PRINCIPAIS ====================
 
 // CARREGAR VIAGENS
@@ -38,7 +72,7 @@ async function carregarViagens() {
     mostrarLoading('Carregando viagens...');
     
     try {
-        const resultado = await window.supabase.salvarViagem(dados);
+        viagens = await window.supabase.buscarViagens();
         console.log(`📊 ${viagens.length} viagens carregadas`);
         
         // Atualizar interface
@@ -63,7 +97,7 @@ async function recarregarViagens() {
     mostrarLoading('Atualizando...');
     
     try {
-     viagens = await window.supabase.buscarViagens();
+        viagens = await window.supabase.buscarViagens(true);
         atualizarTabela();
         atualizarContador();
         mostrarMensagem('Viagens atualizadas!', 'sucesso');
@@ -89,7 +123,7 @@ async function salvarViagem() {
     mostrarLoading('Salvando viagem...');
     
     try {
-        // Salvar no Microsoft Lists
+        // Salvar no Supabase
         const resultado = await window.supabase.salvarViagem(dados);
         
         if (resultado.success) {
@@ -135,7 +169,7 @@ function gerarWhatsApp() {
     }
     
     const dados = coletarDadosFormulario();
-    const link = window.lists.gerarLinkWhatsApp(dados);
+    const link = window.supabase.gerarLinkWhatsApp(dados);
     
     // Abrir WhatsApp em nova aba
     window.open(link, '_blank');
@@ -147,35 +181,65 @@ function gerarWhatsApp() {
 // ==================== FUNÇÕES DE FORMULÁRIO ====================
 
 function coletarDadosFormulario() {
+    const motorista = document.getElementById('motorista').value;
+    const passageiro = document.getElementById('passageiro').value.trim();
+    
+    // Para Van, juntar nome e documento
+    let passageiroCompleto = passageiro;
+    if (motorista === 'Van') {
+        const nome = document.getElementById('nome-passageiro').value.trim();
+        const documento = document.getElementById('documento-passageiro').value.trim();
+        if (nome && documento) {
+            passageiroCompleto = `${nome} - ${documento}` + (passageiro ? ` | ${passageiro}` : '');
+        }
+    }
+    
     return {
         data: document.getElementById('data').value,
         horario: document.getElementById('horario').value,
-        motorista: document.getElementById('motorista').value.trim(),
+        motorista: motorista,
         origem: document.getElementById('origem').value.trim(),
         destino: document.getElementById('destino').value.trim(),
-        passageiro: document.getElementById('passageiro').value.trim(),
+        passageiro: passageiroCompleto,
         observacoes: document.getElementById('observacoes').value.trim()
     };
 }
 
 function validarFormulario() {
-    const camposObrigatorios = [
-        'data', 'horario', 'motorista', 'origem', 'destino'
-    ];
-    
+    const camposObrigatorios = ['data', 'horario', 'motorista', 'origem', 'destino'];
     let valido = true;
     
+    // Validar campos básicos
     camposObrigatorios.forEach(campo => {
         const elemento = document.getElementById(campo);
-        const valor = elemento.value.trim();
-        
-        if (!valor) {
+        if (!elemento.value.trim()) {
             elemento.style.borderColor = '#FF5252';
             valido = false;
         } else {
             elemento.style.borderColor = '#e0e0e0';
         }
     });
+    
+    // Validação especial para Van
+    const motorista = document.getElementById('motorista').value;
+    if (motorista === 'Van') {
+        const nome = document.getElementById('nome-passageiro').value.trim();
+        const documento = document.getElementById('documento-passageiro').value.trim();
+        
+        if (!nome) {
+            document.getElementById('nome-passageiro').style.borderColor = '#FF5252';
+            valido = false;
+        } else {
+            document.getElementById('nome-passageiro').style.borderColor = '#e0e0e0';
+        }
+        
+        if (!documento) {
+            document.getElementById('documento-passageiro').style.borderColor = '#FF5252';
+            valido = false;
+        } else {
+            document.getElementById('documento-passageiro').style.borderColor = '#e0e0e0';
+        }
+    }
     
     return valido;
 }
@@ -187,10 +251,23 @@ function limparFormulario() {
     document.getElementById('destino').value = '';
     document.getElementById('passageiro').value = '';
     document.getElementById('observacoes').value = '';
+    document.getElementById('nome-passageiro').value = '';
+    document.getElementById('documento-passageiro').value = '';
+    document.getElementById('campos-van').style.display = 'none';
+    
+    // Resetar data para hoje
+    const hoje = new Date();
+    document.getElementById('data').valueAsDate = hoje;
+    
+    // Resetar horário padrão
+    const proximaHora = new Date(hoje.getTime() + 60 * 60 * 1000);
+    document.getElementById('horario').value = 
+        proximaHora.getHours().toString().padStart(2, '0') + ':00';
     
     // Resetar validação visual
-    ['motorista', 'origem', 'destino'].forEach(id => {
-        document.getElementById(id).style.borderColor = '#e0e0e0';
+    ['motorista', 'origem', 'destino', 'nome-passageiro', 'documento-passageiro'].forEach(id => {
+        const elemento = document.getElementById(id);
+        if (elemento) elemento.style.borderColor = '#e0e0e0';
     });
     
     // Focar no primeiro campo
@@ -228,10 +305,15 @@ function atualizarTabela() {
         const dataFormatada = viagem.data ? 
             new Date(viagem.data).toLocaleDateString('pt-BR') : '';
         
+        // Destacar por tipo de motorista
+        let motoristaClass = '';
+        if (viagem.motorista === 'Van') motoristaClass = 'van-motorista';
+        if (viagem.motorista === 'Uber') motoristaClass = 'uber-motorista';
+        
         row.innerHTML = `
             <td>${dataFormatada}</td>
             <td>${viagem.horario || ''}</td>
-            <td><strong>${viagem.motorista || ''}</strong></td>
+            <td class="${motoristaClass}"><strong>${viagem.motorista || ''}</strong></td>
             <td>${viagem.origem || ''} → ${viagem.destino || ''}</td>
             <td class="actions-cell">
                 ${viagem.whatsappLink ? `
@@ -293,14 +375,14 @@ function atualizarContador() {
     totalElement.textContent = `${total} viagem${total !== 1 ? 's' : ''}`;
     
     // Determinar fonte dos dados
-    const temOnline = viagens.some(v => v.origemDados === 'lists');
+    const temOnline = viagens.some(v => v.origemDados === 'supabase');
     const temOffline = viagens.some(v => v.origemDados === 'offline');
     
     if (temOnline && temOffline) {
         fonteElement.textContent = 'Misto';
         fonteElement.className = 'badge';
     } else if (temOnline) {
-        fonteElement.textContent = 'Lists';
+        fonteElement.textContent = 'Supabase';
         fonteElement.className = 'badge lists';
     } else if (temOffline) {
         fonteElement.textContent = 'Local';
@@ -331,6 +413,9 @@ function editarViagem(id) {
     document.getElementById('destino').value = viagem.destino || '';
     document.getElementById('passageiro').value = viagem.passageiro || '';
     document.getElementById('observacoes').value = viagem.observacoes || '';
+    
+    // Atualizar campos baseados no motorista
+    atualizarCampos();
     
     // Remover da lista temporariamente
     viagens = viagens.filter(v => v.id !== id);
@@ -492,6 +577,16 @@ style.textContent = `
         from { transform: translateX(0); opacity: 1; }
         to { transform: translateX(100%); opacity: 0; }
     }
+    
+    .van-motorista {
+        color: #d32f2f;
+        font-weight: bold;
+    }
+    
+    .uber-motorista {
+        color: #000000;
+        font-weight: bold;
+    }
 `;
 document.head.appendChild(style);
 
@@ -506,5 +601,6 @@ window.editarViagem = editarViagem;
 window.excluirViagem = excluirViagem;
 window.exportarParaExcel = exportarParaExcel;
 window.fecharModal = fecharModal;
+window.atualizarCampos = atualizarCampos;
 
 console.log('✅ Sistema de Controle de Viagens carregado com sucesso!');
