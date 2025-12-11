@@ -3,6 +3,7 @@
 // ==================== VARIÁVEIS GLOBAIS ====================
 let viagens = [];
 let filtroAtual = '';
+let contadorPassageiros = 1;
 
 // ==================== INICIALIZAÇÃO ====================
 document.addEventListener('DOMContentLoaded', function() {
@@ -26,8 +27,10 @@ document.addEventListener('DOMContentLoaded', function() {
         filtrarViagens();
     });
     
-    // Configurar tecla Enter no formulário
+    // Configurar teclas de atalho
     configurarTeclas();
+    
+    console.log('✅ Sistema inicializado com sucesso!');
 });
 
 // ==================== FUNÇÕES PARA MOTORISTAS ====================
@@ -35,34 +38,86 @@ document.addEventListener('DOMContentLoaded', function() {
 function atualizarCampos() {
     const motorista = document.getElementById('motorista').value;
     const camposVan = document.getElementById('campos-van');
-    const passageiroInput = document.getElementById('passageiro');
+    const campoPassageiroUber = document.getElementById('campo-passageiro-uber');
     
     // Mostrar/ocultar campos da Van
     if (motorista === 'Van') {
         camposVan.style.display = 'block';
-        passageiroInput.placeholder = 'Informações adicionais (opcional)';
-        // Limpar campo passageiro quando selecionar Van
-        passageiroInput.value = '';
-    } else {
-        camposVan.style.display = 'none';
-        passageiroInput.placeholder = 'Opcional';
+        campoPassageiroUber.style.display = 'none';
         
-        // Resetar campos da Van
-        document.getElementById('nome-passageiro').value = '';
-        document.getElementById('documento-passageiro').value = '';
-        document.getElementById('nome-passageiro').style.borderColor = '#e0e0e0';
-        document.getElementById('documento-passageiro').style.borderColor = '#e0e0e0';
+        // Garantir que tem pelo menos um passageiro
+        if (contadorPassageiros === 0) {
+            adicionarPassageiro();
+        }
+    } else if (motorista === 'Uber') {
+        camposVan.style.display = 'none';
+        campoPassageiroUber.style.display = 'block';
+    } else {
+        // Handerson ou Beto
+        camposVan.style.display = 'none';
+        campoPassageiroUber.style.display = 'none';
     }
+}
+
+// ==================== PASSAGEIROS DINÂMICOS ====================
+
+function adicionarPassageiro() {
+    contadorPassageiros++;
+    const lista = document.getElementById('lista-passageiros');
     
-    // Auto-preencher origem padrão para XCMG
-    if (motorista && !document.getElementById('origem').value) {
-        document.getElementById('origem').value = 'XCMG Brasil Indústria';
-    }
+    const novoPassageiro = document.createElement('div');
+    novoPassageiro.className = 'passageiro-item';
+    novoPassageiro.innerHTML = `
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="required">Nome do Passageiro *</label>
+                <input type="text" class="form-control passageiro-nome" placeholder="Nome completo" required>
+            </div>
+            <div class="form-group">
+                <label class="required">Documento *</label>
+                <input type="text" class="form-control passageiro-documento" placeholder="CPF ou RG" required>
+            </div>
+            <div class="form-group" style="align-self: flex-end;">
+                <button type="button" class="btn btn-small btn-danger" onclick="removerPassageiro(this)" style="margin-top: 24px;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
     
-    // Auto-preencher destino sugerido
-    if (motorista && !document.getElementById('destino').value) {
-        document.getElementById('destino').value = 'Campinas, Jundiai, Barueri e Guarulhos';
+    lista.appendChild(novoPassageiro);
+}
+
+function removerPassageiro(botao) {
+    const passageiroItem = botao.closest('.passageiro-item');
+    if (passageiroItem) {
+        passageiroItem.remove();
+        contadorPassageiros--;
+        
+        // Se não houver mais passageiros, adiciona um padrão
+        if (contadorPassageiros === 0) {
+            adicionarPassageiro();
+        }
     }
+}
+
+function obterPassageirosVan() {
+    const passageiros = [];
+    const itens = document.querySelectorAll('.passageiro-item');
+    
+    itens.forEach((item, index) => {
+        const nome = item.querySelector('.passageiro-nome').value.trim();
+        const documento = item.querySelector('.passageiro-documento').value.trim();
+        
+        if (nome || documento) {
+            passageiros.push({
+                nome: nome || `Passageiro ${index + 1}`,
+                documento: documento || 'N/A'
+            });
+        }
+    });
+    
+    return passageiros;
 }
 
 // ==================== FUNÇÕES PRINCIPAIS ====================
@@ -139,7 +194,8 @@ async function salvarViagem() {
                     id: resultado.data.id,
                     ...dados,
                     origemDados: 'offline',
-                    status: 'pendente'
+                    status: 'pendente',
+                    criadoEm: new Date().toISOString()
                 };
                 viagens.unshift(novaViagem);
                 atualizarTabela();
@@ -182,16 +238,17 @@ function gerarWhatsApp() {
 
 function coletarDadosFormulario() {
     const motorista = document.getElementById('motorista').value;
-    const passageiro = document.getElementById('passageiro').value.trim();
     
-    // Para Van, juntar nome e documento
-    let passageiroCompleto = passageiro;
+    // Para Van, processar passageiros dinâmicos
+    let passageiroTexto = '';
     if (motorista === 'Van') {
-        const nome = document.getElementById('nome-passageiro').value.trim();
-        const documento = document.getElementById('documento-passageiro').value.trim();
-        if (nome && documento) {
-            passageiroCompleto = `${nome} - ${documento}` + (passageiro ? ` | ${passageiro}` : '');
-        }
+        const passageiros = obterPassageirosVan();
+        passageiroTexto = passageiros.map(p => `${p.nome} - ${p.documento}`).join(' | ');
+    } else if (motorista === 'Uber') {
+        passageiroTexto = document.getElementById('passageiro-uber').value.trim();
+    } else {
+        // Handerson e Beto - sem campo de passageiro
+        passageiroTexto = '';
     }
     
     return {
@@ -200,7 +257,7 @@ function coletarDadosFormulario() {
         motorista: motorista,
         origem: document.getElementById('origem').value.trim(),
         destino: document.getElementById('destino').value.trim(),
-        passageiro: passageiroCompleto,
+        passageiro: passageiroTexto,
         observacoes: document.getElementById('observacoes').value.trim()
     };
 }
@@ -223,49 +280,74 @@ function validarFormulario() {
     // Validação especial para Van
     const motorista = document.getElementById('motorista').value;
     if (motorista === 'Van') {
-        const nome = document.getElementById('nome-passageiro').value.trim();
-        const documento = document.getElementById('documento-passageiro').value.trim();
+        const passageiros = obterPassageirosVan();
         
-        if (!nome) {
-            document.getElementById('nome-passageiro').style.borderColor = '#FF5252';
+        if (passageiros.length === 0) {
+            mostrarMensagem('Adicione pelo menos um passageiro para Van', 'erro');
             valido = false;
-        } else {
-            document.getElementById('nome-passageiro').style.borderColor = '#e0e0e0';
         }
         
-        if (!documento) {
-            document.getElementById('documento-passageiro').style.borderColor = '#FF5252';
-            valido = false;
-        } else {
-            document.getElementById('documento-passageiro').style.borderColor = '#e0e0e0';
-        }
+        // Validar cada passageiro
+        const itens = document.querySelectorAll('.passageiro-item');
+        itens.forEach((item) => {
+            const nome = item.querySelector('.passageiro-nome').value.trim();
+            const documento = item.querySelector('.passageiro-documento').value.trim();
+            const inputs = item.querySelectorAll('input');
+            
+            if (!nome || !documento) {
+                inputs.forEach(input => {
+                    if (!input.value.trim()) {
+                        input.style.borderColor = '#FF5252';
+                    }
+                });
+                valido = false;
+            } else {
+                inputs.forEach(input => {
+                    input.style.borderColor = '#e0e0e0';
+                });
+            }
+        });
     }
     
     return valido;
 }
 
 function limparFormulario() {
-    // Limpar campos
+    // Limpar campos básicos
     document.getElementById('motorista').value = '';
     document.getElementById('origem').value = '';
     document.getElementById('destino').value = '';
-    document.getElementById('passageiro').value = '';
+    document.getElementById('passageiro-uber').value = '';
     document.getElementById('observacoes').value = '';
-    document.getElementById('nome-passageiro').value = '';
-    document.getElementById('documento-passageiro').value = '';
+    
+    // Limpar passageiros da Van
+    const listaPassageiros = document.getElementById('lista-passageiros');
+    listaPassageiros.innerHTML = `
+        <div class="passageiro-item">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="required">Nome do Passageiro *</label>
+                    <input type="text" class="form-control passageiro-nome" placeholder="Nome completo" required>
+                </div>
+                <div class="form-group">
+                    <label class="required">Documento *</label>
+                    <input type="text" class="form-control passageiro-documento" placeholder="CPF ou RG" required>
+                </div>
+                <div class="form-group" style="align-self: flex-end;">
+                    <button type="button" class="btn btn-small btn-danger" onclick="removerPassageiro(this)" style="margin-top: 24px;">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    contadorPassageiros = 1;
     document.getElementById('campos-van').style.display = 'none';
-    
-    // Resetar data para hoje
-    const hoje = new Date();
-    document.getElementById('data').valueAsDate = hoje;
-    
-    // Resetar horário padrão
-    const proximaHora = new Date(hoje.getTime() + 60 * 60 * 1000);
-    document.getElementById('horario').value = 
-        proximaHora.getHours().toString().padStart(2, '0') + ':00';
+    document.getElementById('campo-passageiro-uber').style.display = 'none';
     
     // Resetar validação visual
-    ['motorista', 'origem', 'destino', 'nome-passageiro', 'documento-passageiro'].forEach(id => {
+    ['motorista', 'origem', 'destino'].forEach(id => {
         const elemento = document.getElementById(id);
         if (elemento) elemento.style.borderColor = '#e0e0e0';
     });
@@ -297,6 +379,13 @@ function atualizarTabela() {
         );
     }
     
+    // Ordenar por data mais recente primeiro
+    viagensParaExibir.sort((a, b) => {
+        const dataA = new Date(a.data + 'T' + a.horario);
+        const dataB = new Date(b.data + 'T' + b.horario);
+        return dataB - dataA;
+    });
+    
     // Adicionar cada viagem
     viagensParaExibir.forEach(viagem => {
         const row = document.createElement('tr');
@@ -305,16 +394,31 @@ function atualizarTabela() {
         const dataFormatada = viagem.data ? 
             new Date(viagem.data).toLocaleDateString('pt-BR') : '';
         
-        // Destacar por tipo de motorista
+        // Determinar classe CSS baseada no motorista
         let motoristaClass = '';
-        if (viagem.motorista === 'Van') motoristaClass = 'van-motorista';
-        if (viagem.motorista === 'Uber') motoristaClass = 'uber-motorista';
+        switch(viagem.motorista) {
+            case 'Van':
+                motoristaClass = 'motorista-van';
+                break;
+            case 'Uber':
+                motoristaClass = 'motorista-uber';
+                break;
+            case 'Handerson':
+                motoristaClass = 'motorista-handerson';
+                break;
+            case 'Beto':
+                motoristaClass = 'motorista-beto';
+                break;
+        }
+        
+        // Formatar rota
+        const rota = `${viagem.origem || ''} → ${viagem.destino || ''}`;
         
         row.innerHTML = `
             <td>${dataFormatada}</td>
             <td>${viagem.horario || ''}</td>
             <td class="${motoristaClass}"><strong>${viagem.motorista || ''}</strong></td>
-            <td>${viagem.origem || ''} → ${viagem.destino || ''}</td>
+            <td>${rota}</td>
             <td class="actions-cell">
                 ${viagem.whatsappLink ? `
                 <button class="action-btn action-whatsapp" onclick="abrirWhatsAppExistente('${viagem.whatsappLink}')">
@@ -411,13 +515,38 @@ function editarViagem(id) {
     document.getElementById('motorista').value = viagem.motorista || '';
     document.getElementById('origem').value = viagem.origem || '';
     document.getElementById('destino').value = viagem.destino || '';
-    document.getElementById('passageiro').value = viagem.passageiro || '';
     document.getElementById('observacoes').value = viagem.observacoes || '';
+    
+    // Se for van, preencher passageiros
+    if (viagem.motorista === 'Van' && viagem.passageiro) {
+        // Limpar lista atual
+        const listaPassageiros = document.getElementById('lista-passageiros');
+        listaPassageiros.innerHTML = '';
+        
+        // Dividir passageiros pelo separador " | "
+        const passageirosArray = viagem.passageiro.split(' | ');
+        contadorPassageiros = 0;
+        
+        passageirosArray.forEach(passageiroStr => {
+            const [nome, documento] = passageiroStr.split(' - ');
+            if (nome || documento) {
+                adicionarPassageiro();
+                const ultimoItem = listaPassageiros.lastElementChild;
+                ultimoItem.querySelector('.passageiro-nome').value = nome || '';
+                ultimoItem.querySelector('.passageiro-documento').value = documento || '';
+            }
+        });
+    }
+    
+    // Se for Uber, preencher passageiro
+    if (viagem.motorista === 'Uber') {
+        document.getElementById('passageiro-uber').value = viagem.passageiro || '';
+    }
     
     // Atualizar campos baseados no motorista
     atualizarCampos();
     
-    // Remover da lista temporariamente
+    // Remover da lista temporariamente (para evitar duplicação)
     viagens = viagens.filter(v => v.id !== id);
     atualizarTabela();
     atualizarContador();
@@ -454,18 +583,6 @@ function mostrarMensagem(texto, tipo = 'info') {
     if (!mensagemDiv) {
         mensagemDiv = document.createElement('div');
         mensagemDiv.id = 'mensagem-flutuante';
-        mensagemDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 15px 20px;
-            border-radius: 8px;
-            color: white;
-            font-weight: 600;
-            z-index: 9999;
-            animation: slideIn 0.3s ease;
-            max-width: 300px;
-        `;
         document.body.appendChild(mensagemDiv);
     }
     
@@ -479,14 +596,14 @@ function mostrarMensagem(texto, tipo = 'info') {
     
     mensagemDiv.style.background = cores[tipo] || cores.info;
     mensagemDiv.textContent = texto;
+    mensagemDiv.style.display = 'block';
+    mensagemDiv.style.animation = 'slideIn 0.3s ease';
     
     // Remover após 3 segundos
     setTimeout(() => {
         mensagemDiv.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => {
-            if (mensagemDiv.parentNode) {
-                mensagemDiv.parentNode.removeChild(mensagemDiv);
-            }
+            mensagemDiv.style.display = 'none';
         }, 300);
     }, 3000);
 }
@@ -559,36 +676,11 @@ function exportarParaExcel() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `viagens_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `viagens_xcmg_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     
     mostrarMensagem(`Exportadas ${viagens.length} viagens para CSV`, 'sucesso');
 }
-
-// ==================== ANIMAÇÕES CSS DINÂMICAS ====================
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
-    
-    .van-motorista {
-        color: #d32f2f;
-        font-weight: bold;
-    }
-    
-    .uber-motorista {
-        color: #000000;
-        font-weight: bold;
-    }
-`;
-document.head.appendChild(style);
 
 // ==================== EXPORTAR FUNÇÕES GLOBAIS ====================
 window.salvarViagem = salvarViagem;
@@ -602,5 +694,5 @@ window.excluirViagem = excluirViagem;
 window.exportarParaExcel = exportarParaExcel;
 window.fecharModal = fecharModal;
 window.atualizarCampos = atualizarCampos;
-
-console.log('✅ Sistema de Controle de Viagens carregado com sucesso!');
+window.adicionarPassageiro = adicionarPassageiro;
+window.removerPassageiro = removerPassageiro;
