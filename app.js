@@ -127,21 +127,29 @@ async function carregarViagens() {
     mostrarLoading('Carregando viagens...');
     
     try {
+        console.log('🔄 Iniciando carregamento de viagens...');
         viagens = await window.supabase.buscarViagens();
-        console.log(`📊 ${viagens.length} viagens carregadas`);
+        console.log(`📊 ${viagens ? viagens.length : 0} viagens carregadas`);
+        
+        // Garantir que viagens é um array
+        if (!Array.isArray(viagens)) {
+            console.warn('⚠️ viagens não é um array, convertendo...');
+            viagens = [];
+        }
         
         // Atualizar interface
         atualizarTabela();
         atualizarContador();
         
+    } catch (error) {
+        console.error('❌ Erro ao carregar viagens:', error);
+        mostrarMensagem('Erro ao carregar viagens: ' + error.message, 'erro');
+        viagens = []; // Reset para array vazio em caso de erro
+    } finally {
         // Esconder linha de loading
         const loadingRow = document.getElementById('loading-row');
         if (loadingRow) loadingRow.style.display = 'none';
         
-    } catch (error) {
-        console.error('❌ Erro ao carregar viagens:', error);
-        mostrarMensagem('Erro ao carregar viagens', 'erro');
-    } finally {
         esconderLoading();
     }
 }
@@ -414,14 +422,17 @@ function atualizarTabela() {
         // Formatar rota
         const rota = `${viagem.origem || ''} → ${viagem.destino || ''}`;
         
+        // Escapar aspas no link do WhatsApp para evitar erros no onclick
+        const whatsappLink = viagem.whatsappLink ? viagem.whatsappLink.replace(/'/g, "\\'") : '';
+        
         row.innerHTML = `
             <td>${dataFormatada}</td>
             <td>${viagem.horario || ''}</td>
             <td class="${motoristaClass}"><strong>${viagem.motorista || ''}</strong></td>
             <td>${rota}</td>
             <td class="actions-cell">
-                ${viagem.whatsappLink ? `
-                <button class="action-btn action-whatsapp" onclick="abrirWhatsAppExistente('${viagem.whatsappLink}')">
+                ${whatsappLink ? `
+                <button class="action-btn action-whatsapp" onclick="abrirWhatsAppExistente('${whatsappLink}')">
                     <i class="fab fa-whatsapp"></i>
                 </button>
                 ` : ''}
@@ -507,7 +518,10 @@ function abrirWhatsAppExistente(link) {
 
 function editarViagem(id) {
     const viagem = viagens.find(v => v.id === id);
-    if (!viagem) return;
+    if (!viagem) {
+        mostrarMensagem('Viagem não encontrada', 'erro');
+        return;
+    }
     
     // Preencher formulário
     document.getElementById('data').value = viagem.data || '';
@@ -561,9 +575,9 @@ function excluirViagem(id) {
     // Se for viagem offline, remover do localStorage
     const viagem = viagens.find(v => v.id === id);
     if (viagem && viagem.origemDados === 'offline') {
-        const dadosOffline = JSON.parse(localStorage.getItem('viagens_offline') || '[]');
+        const dadosOffline = JSON.parse(localStorage.getItem('viagens_offline_xcmg') || '[]');
         const novosDados = dadosOffline.filter(v => v.id !== id);
-        localStorage.setItem('viagens_offline', JSON.stringify(novosDados));
+        localStorage.setItem('viagens_offline_xcmg', JSON.stringify(novosDados));
     }
     
     // Remover da lista
