@@ -1,6 +1,12 @@
 // supabase-integration.js - Versão Atualizada com suas credenciais
 // Integração com Supabase - Sistema de Controle de Viagens
 
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = 'https://nhoxcxucogdnqkkilfyn.supabase.co'
+const supabaseKey = process.env.SUPABASE_KEY
+const supabase = createClient(supabaseUrl, supabaseKey)
+
 class SupabaseIntegration {
     constructor() {
         // ==== SUAS NOVAS CREDENCIAIS DO SUPABASE ====
