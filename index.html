@@ -32,7 +32,7 @@
                 <!-- HORÁRIO -->
                 <div class="form-group">
                     <label for="horario"><i class="fas fa-clock"></i> Horário *</label>
-                    <input type="text" id="horario" class="form-control" placeholder="07:30" maxlength="5" required>
+                    <input type="time" id="horario" class="form-control" required>
                 </div>
                 
                 <!-- MOTORISTA -->
@@ -50,37 +50,51 @@
                 <!-- ORIGEM -->
                 <div class="form-group">
                     <label for="origem"><i class="fas fa-map-marker-alt"></i> Origem *</label>
-                    <input type="text" id="origem" class="form-control" placeholder="Local de origem" required>
+                    <input type="text" id="origem" class="form-control" placeholder="Digite a origem" required>
                 </div>
                 
                 <!-- DESTINO -->
                 <div class="form-group">
                     <label for="destino"><i class="fas fa-flag-checkered"></i> Destino *</label>
-                    <input type="text" id="destino" class="form-control" placeholder="Campinas, Jundiai, Barueri e Guarulhos" required>
-                </div>
-                
-                <!-- PASSAGEIRO -->
-                <div class="form-group">
-                    <label for="passageiro"><i class="fas fa-users"></i> Passageiro(s)</label>
-                    <input type="text" id="passageiro" class="form-control" placeholder="Opcional">
+                    <input type="text" id="destino" class="form-control" placeholder="Digite o destino" required>
                 </div>
             </div>
             
             <!-- CAMPOS DA VAN -->
             <div id="campos-van" style="display: none;">
-                <h3 style="margin: 20px 0 15px; color: #d32f2f; border-bottom: 2px solid #ffcdd2; padding-bottom: 8px;">
-                    <i class="fas fa-van-shuttle"></i> Informações do Passageiro (Van)
-                </h3>
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="nome-passageiro" class="required"><i class="fas fa-user"></i> Nome do Passageiro *</label>
-                        <input type="text" id="nome-passageiro" class="form-control" placeholder="Nome completo do passageiro">
-                    </div>
-                    <div class="form-group">
-                        <label for="documento-passageiro" class="required"><i class="fas fa-id-card"></i> Documento *</label>
-                        <input type="text" id="documento-passageiro" class="form-control" placeholder="CPF ou RG do passageiro">
+                <div class="form-header">
+                    <h3><i class="fas fa-van-shuttle"></i> Passageiros da Van</h3>
+                    <button type="button" class="btn btn-small btn-outline" onclick="adicionarPassageiro()">
+                        <i class="fas fa-plus"></i> Adicionar Passageiro
+                    </button>
+                </div>
+                
+                <div id="lista-passageiros">
+                    <!-- Passageiros serão adicionados aqui dinamicamente -->
+                    <div class="passageiro-item">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="required">Nome do Passageiro *</label>
+                                <input type="text" class="form-control passageiro-nome" placeholder="Nome completo" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="required">Documento *</label>
+                                <input type="text" class="form-control passageiro-documento" placeholder="CPF ou RG" required>
+                            </div>
+                            <div class="form-group" style="align-self: flex-end;">
+                                <button type="button" class="btn btn-small btn-danger" onclick="removerPassageiro(this)" style="margin-top: 24px;">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
+            
+            <!-- PASSAGEIRO (para Uber) -->
+            <div class="form-group" id="campo-passageiro-uber" style="display: none;">
+                <label for="passageiro-uber"><i class="fas fa-user-friends"></i> Passageiro(s)</label>
+                <input type="text" id="passageiro-uber" class="form-control" placeholder="Nome do(s) passageiro(s)">
             </div>
             
             <!-- OBSERVAÇÕES -->
@@ -128,7 +142,7 @@
                             <th>Data</th>
                             <th>Horário</th>
                             <th>Motorista</th>
-                            <th>Origem → Destino</th>
+                            <th>Rota</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
@@ -159,7 +173,7 @@
         <!-- RODAPÉ -->
         <footer class="footer">
             <p>Sistema de Controle de Viagens | XCMG Brasil Indústria</p>
-            <p class="small">Handerson | Beto | Uber | Van</p>
+            <p class="small">Motoristas: Handerson | Beto | Uber | Van</p>
         </footer>
     </div>
 
