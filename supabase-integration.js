@@ -1,17 +1,19 @@
-// supabase-integration.js - VERSÃO PRONTA PARA USAR
+// supabase-integration.js
+// Integração com Supabase - Sistema de Controle de Viagens
+
 class SupabaseIntegration {
     constructor() {
-        // ==== SUAS CREDENCIAIS - JÁ ESTÃO AQUI ====
+        // ==== SUAS CREDENCIAIS DO SUPABASE ====
         this.config = {
-            supabaseUrl: "https://nhoxcxucogdnqkkilfyn.supabase.co",
-            supabaseKey: "sb_publishable_lvhelLGHshMZZajKf7avxw_fLU67Zg2"
+            supabaseUrl: "https://mnkhjittwjmybjipspwp.supabase.co",
+            supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ua2hqaXR0d2pteWJqaXBzcHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0NTAzMTksImV4cCI6MjA4MTAyNjMxOX0.EqO2SPaevPDdEo7vjDZQNyUXKiVurxROy9lcTxTn4Ic"
         };
         
         this.cacheKey = 'viagens_cache';
         this.offlineKey = 'viagens_offline';
         this.isOnline = navigator.onLine;
         
-        console.log('🚀 Supabase configurado! URL:', this.config.supabaseUrl);
+        console.log('🚀 Supabase Integration iniciado');
     }
     
     // ==================== TESTE DE CONEXÃO ====================
@@ -33,8 +35,6 @@ class SupabaseIntegration {
             if (response.ok) {
                 console.log('✅ SUPABASE CONECTADO COM SUCESSO!');
                 this.isOnline = true;
-                
-                // Atualizar status na interface
                 this.atualizarStatusUI(true);
                 return true;
             } else {
@@ -197,6 +197,58 @@ class SupabaseIntegration {
         }
     }
     
+    // ==================== GERAR LINK WHATSAPP ====================
+    gerarLinkWhatsApp(dados) {
+        const motorista = dados.motorista;
+        let mensagem = '';
+        
+        // Formatar data brasileira
+        const dataObj = new Date(dados.data);
+        const dataFormatada = dataObj.toLocaleDateString('pt-BR');
+        
+        if (motorista === 'Uber') {
+            mensagem = `NOVA VIAGEM PROGRAMADA!\n\n` +
+                       `Data: ${dataFormatada} às ${dados.horario}\n` +
+                       `Passageiro(s): ${dados.passageiro || 'N/A'}\n` +
+                       `Origem: ${dados.origem}\n` +
+                       `Destino: ${dados.destino}\n\n` +
+                       `Observação: ${dados.observacoes || ''}`;
+                       
+        } else if (motorista === 'Van') {
+            // Extrair nome e documento da Van
+            let nomePassageiro = 'N/A';
+            let documentoPassageiro = '';
+            
+            if (dados.passageiro) {
+                const parts = dados.passageiro.split(' - ');
+                if (parts.length >= 2) {
+                    nomePassageiro = parts[0];
+                    documentoPassageiro = parts[1].split(' | ')[0];
+                }
+            }
+            
+            mensagem = `NOVA VIAGEM PROGRAMADA!\n\n` +
+                       `Data: ${dataFormatada} às ${dados.horario}\n` +
+                       `Passageiro(s): ${nomePassageiro}\n` +
+                       `Documento: ${documentoPassageiro || 'N/A'}\n` +
+                       `Origem: ${dados.origem}\n` +
+                       `Destino: ${dados.destino}\n\n` +
+                       `Observação: ${dados.observacoes || ''}`;
+                       
+        } else {
+            // Handerson e Beto
+            mensagem = `NOVA VIAGEM PROGRAMADA!\n\n` +
+                       `Data: ${dataFormatada} às ${dados.horario}\n` +
+                       `Passageiro(s): ${dados.passageiro || 'N/A'}\n` +
+                       `Origem: ${dados.origem}\n` +
+                       `Destino: ${dados.destino}\n` +
+                       `Motorista: ${dados.motorista}\n\n` +
+                       `Observação: ${dados.observacoes || ''}`;
+        }
+        
+        return `https://api.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`;
+    }
+    
     // ==================== BUSCAR VIAGENS ====================
     async buscarViagens(forcarAtualizacao = false) {
         console.log('🔍 Buscando viagens...');
@@ -343,19 +395,6 @@ class SupabaseIntegration {
                dados.motorista && 
                dados.origem && 
                dados.destino;
-    }
-    
-    gerarLinkWhatsApp(dados) {
-        const mensagem = `*NOVA VIAGEM PROGRAMADA!*\n\n` +
-                        `📅 Data: ${dados.data}\n` +
-                        `🕐 Horário: ${dados.horario}\n` +
-                        `👤 Motorista: ${dados.motorista}\n` +
-                        `📍 Origem: ${dados.origem}\n` +
-                        `🎯 Destino: ${dados.destino}` +
-                        (dados.passageiro ? `\n👥 Passageiro(s): ${dados.passageiro}` : '') +
-                        (dados.observacoes ? `\n📝 Observações: ${dados.observacoes}` : '');
-        
-        return `https://api.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`;
     }
     
     getDadosOffline() {
