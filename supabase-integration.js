@@ -5,8 +5,8 @@ class SupabaseIntegration {
     constructor() {
         // ==== CREDENCIAIS DO SUPABASE ====
         this.config = {
-            supabaseUrl: "https://mnkhjittwjmybjipspwp.supabase.co",
-            supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ua2hqaXR0d2pteWJqaXBzcHdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0NTAzMTksImV4cCI6MjA4MTAyNjMxOX0.EqO2SPaevPDdEo7vjDZQNyUXKiVurxROy9lcTxTn4Ic"
+            supabaseUrl: "https://nhoxcxucogdnqkkilfyn.supabase.co",
+            supabaseKey: "esb_publishable_lvhelLGHshMZZajKf7avxw_fLU67Zg2"
         };
         
         this.cacheKey = 'viagens_cache_xcmg';
