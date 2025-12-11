@@ -166,11 +166,6 @@ select.form-control {
     padding-right: 40px;
 }
 
-select option[value="Van"] {
-    font-weight: bold;
-    color: #d32f2f;
-}
-
 /* ===== CAMPOS DA VAN ===== */
 #campos-van {
     margin: 25px 0;
@@ -257,6 +252,16 @@ select option[value="Van"] {
 .btn-small {
     padding: 8px 16px;
     font-size: 14px;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    border: none;
+}
+
+.btn-danger:hover {
+    background: #c82333;
 }
 
 /* ===== TABELA ===== */
@@ -368,6 +373,7 @@ select option[value="Van"] {
 .actions-cell {
     display: flex;
     gap: 8px;
+    min-width: 140px;
 }
 
 .action-btn {
@@ -530,6 +536,56 @@ select option[value="Van"] {
     margin-top: 5px;
 }
 
+/* ===== PASSAGEIROS DINÂMICOS ===== */
+.form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.form-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.passageiro-item {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #dee2e6;
+    animation: fadeIn 0.3s ease;
+}
+
+.passageiro-item:last-child {
+    margin-bottom: 0;
+}
+
+/* ===== ESTILOS ESPECÍFICOS ===== */
+.motorista-van {
+    background: #e8f5e9 !important;
+    border-left: 4px solid #28a745 !important;
+}
+
+.motorista-uber {
+    background: #f5f5f5 !important;
+    border-left: 4px solid #000000 !important;
+}
+
+.motorista-handerson {
+    background: #e3f2fd !important;
+    border-left: 4px solid #2196F3 !important;
+}
+
+.motorista-beto {
+    background: #f3e5f5 !important;
+    border-left: 4px solid #9C27B0 !important;
+}
+
 /* ===== RESPONSIVO ===== */
 @media (max-width: 768px) {
     .container {
@@ -575,6 +631,11 @@ select option[value="Van"] {
     .modal-content {
         width: 95%;
     }
+    
+    .actions-cell {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
 }
 
 /* ===== ANIMAÇÕES ===== */
@@ -588,31 +649,26 @@ select option[value="Van"] {
     animation: pulse 0.5s ease;
 }
 
-/* ===== MENSAGENS ===== */
-.mensagem {
-    padding: 12px 16px;
+/* ===== MENSAGENS FLUTUANTES ===== */
+#mensagem-flutuante {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
     border-radius: 8px;
-    margin: 10px 0;
-    display: none;
+    color: white;
+    font-weight: 600;
+    z-index: 9999;
+    animation: slideIn 0.3s ease;
+    max-width: 300px;
 }
 
-.mensagem.sucesso {
-    background: #e8f5e9;
-    color: #2e7d32;
-    border: 1px solid #c8e6c9;
-    display: block;
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
 }
 
-.mensagem.erro {
-    background: #ffebee;
-    color: #c62828;
-    border: 1px solid #ffcdd2;
-    display: block;
-}
-
-.mensagem.aviso {
-    background: #fff3e0;
-    color: #f57c00;
-    border: 1px solid #ffe0b2;
-    display: block;
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
 }
