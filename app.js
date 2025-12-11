@@ -389,8 +389,8 @@ function atualizarTabela() {
     
     // Ordenar por data mais recente primeiro
     viagensParaExibir.sort((a, b) => {
-        const dataA = new Date(a.data + 'T' + a.horario);
-        const dataB = new Date(b.data + 'T' + b.horario);
+        const dataA = new Date(a.criadoEm || a.data);
+        const dataB = new Date(b.criadoEm || b.data);
         return dataB - dataA;
     });
     
@@ -423,7 +423,8 @@ function atualizarTabela() {
         const rota = `${viagem.origem || ''} → ${viagem.destino || ''}`;
         
         // Escapar aspas no link do WhatsApp para evitar erros no onclick
-        const whatsappLink = viagem.whatsappLink ? viagem.whatsappLink.replace(/'/g, "\\'") : '';
+        const whatsappLink = viagem.whatsappLink ? 
+            viagem.whatsappLink.replace(/'/g, "\\'").replace(/"/g, '&quot;') : '';
         
         row.innerHTML = `
             <td>${dataFormatada}</td>
@@ -449,6 +450,7 @@ function atualizarTabela() {
         if (viagem.origemDados === 'offline') {
             row.style.opacity = '0.8';
             row.style.fontStyle = 'italic';
+            row.title = 'Viagem salva localmente - será sincronizada quando online';
         }
         
         tbody.appendChild(row);
@@ -490,7 +492,7 @@ function atualizarContador() {
     totalElement.textContent = `${total} viagem${total !== 1 ? 's' : ''}`;
     
     // Determinar fonte dos dados
-    const temOnline = viagens.some(v => v.origemDados === 'supabase');
+    const temOnline = viagens.some(v => v.origemDados === 'online' || v.origemDados === 'supabase');
     const temOffline = viagens.some(v => v.origemDados === 'offline');
     
     if (temOnline && temOffline) {
