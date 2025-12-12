@@ -32,8 +32,48 @@ document.addEventListener('DOMContentLoaded', function() {
     // Configurar teclas de atalho
     configurarTeclas();
     
+    // Configurar delegção de eventos para botões dinâmicos
+    configurarDelegacaoEventos();
+    
     console.log('✅ Sistema inicializado com sucesso!');
 });
+
+// ==================== CONFIGURAR DELEGAÇÃO DE EVENTOS ====================
+function configurarDelegacaoEventos() {
+    // Usar delegação de eventos para botões dinâmicos
+    document.addEventListener('click', function(event) {
+        const target = event.target;
+        
+        // Verificar se o clique foi em um botão de ação
+        if (target.closest('.action-btn')) {
+            const button = target.closest('.action-btn');
+            
+            // Botão WhatsApp
+            if (button.classList.contains('action-whatsapp')) {
+                const link = button.getAttribute('data-whatsapp-link');
+                if (link) {
+                    abrirWhatsAppExistente(link);
+                }
+            }
+            
+            // Botão Editar
+            if (button.classList.contains('action-edit')) {
+                const id = button.getAttribute('data-viagem-id');
+                if (id) {
+                    editarViagem(id);
+                }
+            }
+            
+            // Botão Excluir
+            if (button.classList.contains('action-delete')) {
+                const id = button.getAttribute('data-viagem-id');
+                if (id) {
+                    excluirViagem(id);
+                }
+            }
+        }
+    });
+}
 
 // ==================== FUNÇÕES PARA MOTORISTAS ====================
 
@@ -425,18 +465,19 @@ function atualizarTabela() {
         // Formatar rota
         const rota = `${viagem.origem || ''} → ${viagem.destino || ''}`;
         
-        // Criar botões com event listeners diretos
+        // Criar HTML dos botões - SIMPLIFICADO
+        const whatsappBtn = viagem.whatsappLink ? 
+            `<button class="action-btn action-whatsapp" data-whatsapp-link="${viagem.whatsappLink.replace(/"/g, '&quot;')}">
+                <i class="fab fa-whatsapp"></i>
+            </button>` : '';
+        
         row.innerHTML = `
             <td>${dataFormatada}</td>
             <td>${viagem.horario || ''}</td>
             <td class="${motoristaClass}"><strong>${viagem.motorista || ''}</strong></td>
             <td>${rota}</td>
             <td class="actions-cell">
-                ${viagem.whatsappLink ? `
-                <button class="action-btn action-whatsapp" data-whatsapp-link="${viagem.whatsappLink}">
-                    <i class="fab fa-whatsapp"></i>
-                </button>
-                ` : ''}
+                ${whatsappBtn}
                 <button class="action-btn action-edit" data-viagem-id="${viagem.id}">
                     <i class="fas fa-edit"></i>
                 </button>
@@ -445,31 +486,6 @@ function atualizarTabela() {
                 </button>
             </td>
         `;
-        
-        // Adicionar event listeners aos botões
-        const whatsappBtn = row.querySelector('.action-whatsapp');
-        if (whatsappBtn) {
-            whatsappBtn.addEventListener('click', function() {
-                const link = this.getAttribute('data-whatsapp-link');
-                abrirWhatsAppExistente(link);
-            });
-        }
-        
-        const editBtn = row.querySelector('.action-edit');
-        if (editBtn) {
-            editBtn.addEventListener('click', function() {
-                const id = this.getAttribute('data-viagem-id');
-                editarViagem(id);
-            });
-        }
-        
-        const deleteBtn = row.querySelector('.action-delete');
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', function() {
-                const id = this.getAttribute('data-viagem-id');
-                excluirViagem(id);
-            });
-        }
         
         // Destacar viagens offline
         if (viagem.origemDados === 'offline') {
@@ -482,6 +498,7 @@ function atualizarTabela() {
         if (modoEdicao && viagem.id === viagemEditandoId) {
             row.style.backgroundColor = '#fff9c4';
             row.style.borderLeft = '4px solid #ff9800';
+            row.setAttribute('data-editing', 'true');
         }
         
         tbody.appendChild(row);
@@ -546,25 +563,31 @@ function atualizarContador() {
 function abrirWhatsAppExistente(link) {
     if (link && link.startsWith('https://')) {
         window.open(link, '_blank');
+        mostrarMensagem('WhatsApp aberto!', 'sucesso');
     }
 }
 
 function editarViagem(id) {
+    console.log('✏️ Tentando editar viagem ID:', id);
+    
     const viagem = viagens.find(v => v.id === id);
     if (!viagem) {
+        console.error('❌ Viagem não encontrada:', id);
         mostrarMensagem('Viagem não encontrada', 'erro');
         return;
     }
     
-    console.log('✏️ Editando viagem:', viagem);
+    console.log('✅ Viagem encontrada para edição:', viagem);
     
     // Entrar no modo edição
     modoEdicao = true;
     viagemEditandoId = id;
     
     // Mudar título do formulário
-    document.querySelector('.card h2').innerHTML = 
-        '<i class="fas fa-edit"></i> Editando Viagem';
+    const tituloForm = document.querySelector('.card h2');
+    if (tituloForm) {
+        tituloForm.innerHTML = '<i class="fas fa-edit"></i> Editando Viagem';
+    }
     
     // Mudar texto do botão salvar
     const salvarBtn = document.querySelector('.btn-primary');
@@ -574,16 +597,17 @@ function editarViagem(id) {
     
     // Mostrar botão cancelar edição
     const buttonGroup = document.querySelector('.button-group');
-    const cancelarBtn = document.createElement('button');
-    cancelarBtn.type = 'button';
-    cancelarBtn.className = 'btn btn-warning';
-    cancelarBtn.innerHTML = '<i class="fas fa-times"></i> Cancelar Edição';
-    cancelarBtn.onclick = sairModoEdicao;
-    
-    // Verificar se já existe botão de cancelar
-    const existingCancelBtn = buttonGroup.querySelector('.btn-warning');
-    if (!existingCancelBtn) {
-        buttonGroup.appendChild(cancelarBtn);
+    if (buttonGroup) {
+        // Verificar se já existe botão de cancelar
+        const existingCancelBtn = buttonGroup.querySelector('.btn-warning');
+        if (!existingCancelBtn) {
+            const cancelarBtn = document.createElement('button');
+            cancelarBtn.type = 'button';
+            cancelarBtn.className = 'btn btn-warning';
+            cancelarBtn.innerHTML = '<i class="fas fa-times"></i> Cancelar Edição';
+            cancelarBtn.onclick = sairModoEdicao;
+            buttonGroup.appendChild(cancelarBtn);
+        }
     }
     
     // Preencher formulário com dados da viagem
@@ -596,23 +620,29 @@ function editarViagem(id) {
     
     // Se for van, preencher passageiros
     if (viagem.motorista === 'Van' && viagem.passageiro) {
+        console.log('🚐 Processando passageiros da Van:', viagem.passageiro);
+        
         // Limpar lista atual
         const listaPassageiros = document.getElementById('lista-passageiros');
-        listaPassageiros.innerHTML = '';
-        
-        // Dividir passageiros pelo separador " | "
-        const passageirosArray = viagem.passageiro.split(' | ');
-        contadorPassageiros = 0;
-        
-        passageirosArray.forEach(passageiroStr => {
-            const [nome, documento] = passageiroStr.split(' - ');
-            if (nome || documento) {
-                adicionarPassageiro();
-                const ultimoItem = listaPassageiros.lastElementChild;
-                ultimoItem.querySelector('.passageiro-nome').value = nome || '';
-                ultimoItem.querySelector('.passageiro-documento').value = documento || '';
-            }
-        });
+        if (listaPassageiros) {
+            listaPassageiros.innerHTML = '';
+            
+            // Dividir passageiros pelo separador " | "
+            const passageirosArray = viagem.passageiro.split(' | ');
+            contadorPassageiros = 0;
+            
+            passageirosArray.forEach(passageiroStr => {
+                const [nome, documento] = passageiroStr.split(' - ');
+                if (nome || documento) {
+                    adicionarPassageiro();
+                    const ultimoItem = listaPassageiros.lastElementChild;
+                    if (ultimoItem) {
+                        ultimoItem.querySelector('.passageiro-nome').value = nome || '';
+                        ultimoItem.querySelector('.passageiro-documento').value = documento || '';
+                    }
+                }
+            });
+        }
     }
     
     // Se for Uber, preencher passageiro
@@ -626,7 +656,10 @@ function editarViagem(id) {
     // Atualizar tabela para destacar a viagem em edição
     atualizarTabela();
     
-    mostrarMensagem('Viagem carregada para edição', 'sucesso');
+    // Rolar para o formulário
+    document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
+    
+    mostrarMensagem(`Editando viagem de ${viagem.motorista} - ${dataFormatada}`, 'sucesso');
     document.getElementById('motorista').focus();
 }
 
@@ -635,8 +668,10 @@ function sairModoEdicao() {
     viagemEditandoId = null;
     
     // Restaurar título do formulário
-    document.querySelector('.card h2').innerHTML = 
-        '<i class="fas fa-plus-circle"></i> Nova Viagem';
+    const tituloForm = document.querySelector('.card h2');
+    if (tituloForm) {
+        tituloForm.innerHTML = '<i class="fas fa-plus-circle"></i> Nova Viagem';
+    }
     
     // Restaurar texto do botão salvar
     const salvarBtn = document.querySelector('.btn-primary');
@@ -660,7 +695,10 @@ function sairModoEdicao() {
 }
 
 async function excluirViagem(id) {
-    if (!confirm('⚠️ Tem certeza que deseja excluir esta viagem?\n\nEsta ação não pode ser desfeita.')) {
+    console.log('🗑️ Tentando excluir viagem ID:', id);
+    
+    if (!confirm('⚠️ TEM CERTEZA que deseja EXCLUIR esta viagem?\n\nEsta ação NÃO PODE ser desfeita.')) {
+        console.log('❌ Exclusão cancelada pelo usuário');
         return;
     }
     
@@ -669,28 +707,35 @@ async function excluirViagem(id) {
     try {
         const viagem = viagens.find(v => v.id === id);
         if (!viagem) {
+            console.error('❌ Viagem não encontrada para exclusão:', id);
             mostrarMensagem('Viagem não encontrada', 'erro');
             return;
         }
         
+        console.log('✅ Viagem encontrada para exclusão:', viagem);
+        
         // Se for viagem offline, remover do localStorage
         if (viagem.origemDados === 'offline') {
+            console.log('📱 Excluindo viagem offline...');
             const dadosOffline = JSON.parse(localStorage.getItem('viagens_offline_xcmg') || '[]');
             const novosDados = dadosOffline.filter(v => v.id !== id);
             localStorage.setItem('viagens_offline_xcmg', JSON.stringify(novosDados));
-            console.log('🗑️ Viagem offline removida do localStorage');
+            console.log('✅ Viagem offline removida do localStorage');
         } else {
             // Se for viagem online, tentar excluir do Supabase
+            console.log('🌐 Excluindo viagem online do Supabase...');
             const resultado = await window.supabase.excluirViagem(id);
             if (!resultado.success) {
+                console.error('❌ Erro ao excluir do Supabase:', resultado.message);
                 mostrarMensagem('Erro ao excluir viagem do servidor: ' + resultado.message, 'erro');
                 return;
             }
-            console.log('🗑️ Viagem excluída do Supabase');
+            console.log('✅ Viagem excluída do Supabase');
         }
         
         // Remover da lista local
         viagens = viagens.filter(v => v.id !== id);
+        console.log('✅ Removida da lista local');
         
         // Se estava editando esta viagem, sair do modo edição
         if (modoEdicao && viagemEditandoId === id) {
@@ -824,12 +869,11 @@ function exportarParaExcel() {
 }
 
 // ==================== EXPORTAR FUNÇÕES GLOBAIS ====================
-// ATENÇÃO: Todas as funções que são chamadas do HTML precisam estar aqui
 window.salvarViagem = salvarViagem;
 window.gerarWhatsApp = gerarWhatsApp;
 window.limparFormulario = limparFormulario;
 window.filtrarViagens = filtrarViagens;
-window.recarregarViagens = recarregarViagens; // ← ADICIONADA AQUI
+window.recarregarViagens = recarregarViagens;
 window.abrirWhatsAppExistente = abrirWhatsAppExistente;
 window.editarViagem = editarViagem;
 window.excluirViagem = excluirViagem;
