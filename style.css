@@ -673,3 +673,50 @@ select.form-control {
 .pulse {
     animation: pulse 0.5s ease;
 }
+
+/* ===== ESTILOS PARA MODO EDIÇÃO ===== */
+.btn-warning {
+    background: #ff9800;
+    color: white;
+    border: none;
+}
+
+.btn-warning:hover {
+    background: #f57c00;
+}
+
+/* Botão de edição na tabela */
+.action-edit {
+    background: #ff9800 !important;
+    color: white !important;
+}
+
+.action-edit:hover {
+    background: #f57c00 !important;
+}
+
+/* Botão de exclusão na tabela */
+.action-delete {
+    background: #f44336 !important;
+    color: white !important;
+}
+
+.action-delete:hover {
+    background: #d32f2f !important;
+}
+
+/* Destacar linha em edição */
+tr[data-editing="true"] {
+    background-color: #fff9c4 !important;
+    border-left: 4px solid #ff9800 !important;
+}
+
+/* Ajuste no formulário em modo edição */
+.card.editing-mode {
+    border: 2px solid #ff9800;
+    box-shadow: 0 0 15px rgba(255, 152, 0, 0.2);
+}
+
+.card.editing-mode h2 {
+    color: #ff9800;
+}
